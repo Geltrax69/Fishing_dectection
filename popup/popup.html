@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phishing Shield for Gmail</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <span class="shield" aria-hidden="true">🛡️</span>
+    <div>
+      <h1>Phishing Shield</h1>
+      <p>for Gmail</p>
+    </div>
+    <label class="toggle" title="Turn protection on or off">
+      <input type="checkbox" id="enabled" checked>
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <p id="status" class="status on">Protection is ON. Suspicious emails will be flagged in Gmail.</p>
+
+  <dl class="stats">
+    <div><dt>Emails scanned</dt><dd id="scanned">0</dd></div>
+    <div><dt>Flagged</dt><dd id="flagged">0</dd></div>
+    <div><dt>Risky links blocked*</dt><dd id="blocked">0</dd></div>
+  </dl>
+
+  <section class="how">
+    <h2>What it checks</h2>
+    <ul>
+      <li>Sender name vs. real sender domain</li>
+      <li>Links whose text hides a different destination</li>
+      <li>Lookalike domains (e.g. paypa1.com) and URL shorteners</li>
+      <li>Urgent / threatening language and risky attachments</li>
+    </ul>
+  </section>
+
+  <p class="fine">
+    * A “blocked” click means you were shown a warning and chose not to
+    proceed. All checks run locally in your browser — no email content
+    is sent anywhere.
+  </p>
+  <p class="fine warning">
+    Heuristic protection, not a guarantee. If in doubt, go to the official
+    site or app directly — never via a link in a suspicious email.
+  </p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
