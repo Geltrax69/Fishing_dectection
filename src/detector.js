@@ -150,7 +150,7 @@
       reasons.push('Link text shows "' + shown + '" but actually goes to "' + stripWww(host) + '".');
     }
     if (SHORTENERS.indexOf(stripWww(host)) !== -1 || SHORTENERS.indexOf(registrable(host)) !== -1) {
-      score += 25;
+      score += 30;
       reasons.push('Link uses a URL shortener (' + stripWww(host) + '), hiding its real destination.');
     }
     if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
@@ -249,7 +249,7 @@
     (input.attachments || []).forEach(function (name) {
       var ext = '.' + lower(name).split('.').pop();
       if (RISKY_ATTACHMENTS.indexOf(ext) !== -1) {
-        add(25, 'Has a risky attachment (' + name + ') that can run code or hide a fake login page.');
+        add(30, 'Has a risky attachment (' + name + ') that can run code or hide a fake login page.');
       }
     });
 

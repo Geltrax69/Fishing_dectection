@@ -1,0 +1,1 @@
+{"description":"Detects phishing emails in Gmail, flags them, and warns you not to open risky links.","engines":{"node":">=18"},"name":"phishing-shield-gmail","private":true,"scripts":{"test":"node --test tests/*.test.js"},"version":"0.1.0"}
