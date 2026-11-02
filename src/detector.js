@@ -19,7 +19,10 @@
     google: ['google.com', 'gmail.com'],
     microsoft: ['microsoft.com', 'outlook.com', 'live.com', 'office.com'],
     apple: ['apple.com', 'icloud.com'],
-    amazon: ['amazon.com', 'amazon.in', 'amazon.co.uk'],
+    // AWS documents invoicing@aws.com as its billing sender:
+    // https://docs.aws.amazon.com/notifications/latest/userguide/managed-notifications-bcm.html
+    amazon: ['amazon.com', 'amazon.in', 'amazon.co.uk', 'aws.com'],
+    aws: ['aws.com', 'amazon.com'],
     netflix: ['netflix.com'],
     facebook: ['facebook.com', 'meta.com'],
     instagram: ['instagram.com'],
@@ -105,7 +108,8 @@
     var t = lower(text);
     var found = [];
     Object.keys(BRANDS).forEach(function (brand) {
-      if (t.indexOf(brand) !== -1) found.push(brand);
+      // Match brand words, not substrings such as "apple" in "Pineapple".
+      if (new RegExp('(^|[^a-z0-9])' + brand + '([^a-z0-9]|$)', 'i').test(t)) found.push(brand);
     });
     return found;
   }
@@ -168,7 +172,7 @@
           reasons.push('Link domain "' + stripWww(host) + '" looks like ' + brand + ' but is not its official site.');
         } else {
           score += 25;
-          reasons.push('Link mentions ' + brand + ' but goes to "' + stripWww(host) + '", not an official ' + brand + ' domain.');
+          reasons.push('Link mentions ' + brand + ' but goes to "' + stripWww(host) + '", which is not in our known ' + brand + ' domain list. This list may be incomplete.');
         }
       }
     });
@@ -201,7 +205,7 @@
           if (isLookalike(from.domain, brand)) {
             add(40, 'Claims to be ' + brand + ' but was sent from lookalike domain "' + from.domain + '".');
           } else {
-            add(40, 'Claims to be ' + brand + ' but was sent from "' + from.domain + '", not an official ' + brand + ' domain.');
+            add(40, 'Sender name mentions ' + brand + ' but its domain "' + from.domain + '" is not in our known ' + brand + ' domain list. This list may be incomplete; check sender authentication in Gmail.');
           }
         }
       });

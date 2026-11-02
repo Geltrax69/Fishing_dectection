@@ -14,12 +14,17 @@
       <p>for Gmail</p>
     </div>
     <label class="toggle" title="Turn protection on or off">
-      <input type="checkbox" id="enabled" checked>
+      <input type="checkbox" id="enabled" aria-label="Enable phishing protection" checked>
       <span class="slider"></span>
     </label>
   </header>
 
   <p id="status" class="status on">Protection is ON. Suspicious emails will be flagged in Gmail.</p>
+
+  <label class="clean-setting" for="cleanInbox">
+    <span><strong>Clean inbox</strong><small>Sender and subject. Hide previews and attachment chips.</small></span>
+    <input type="checkbox" id="cleanInbox" checked>
+  </label>
 
   <dl class="stats">
     <div><dt>Emails scanned</dt><dd id="scanned">0</dd></div>
@@ -28,12 +33,12 @@
   </dl>
 
   <section class="how">
-    <h2>What it checks</h2>
+    <h2>Email status</h2>
     <ul>
-      <li>Sender name vs. real sender domain</li>
-      <li>Links whose text hides a different destination</li>
-      <li>Lookalike domains (e.g. paypa1.com) and URL shorteners</li>
-      <li>Urgent / threatening language and risky attachments</li>
+      <li><strong>Not fully checked:</strong> preview only. Open the email for the full check.</li>
+      <li><strong>No obvious risks:</strong> message checked; safety is not guaranteed.</li>
+      <li><strong>Flagged:</strong> suspicious signals found.</li>
+      <li><strong>Do not open links:</strong> high risk.</li>
     </ul>
   </section>
 

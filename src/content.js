@@ -23,6 +23,28 @@
 
   var URGENCY = /urgent|immediately|within 24 hours|suspended|will be closed|verify your account|action required|password expired|security alert/i;
   var SUPPORT_SENDER = /support|security|service|helpdesk|account|verify|bank/i;
+  var enabled = true;
+  var results = new Map();
+  var seenBodies = new WeakMap();
+  var seenRows = new WeakMap();
+
+  function messageKey(sender, subject) {
+    return (sender + '\n' + subject).trim().toLowerCase();
+  }
+
+  function statusBadge(level, fullCheck) {
+    var labels = { HIGH: 'Do not open links', SUSPICIOUS: 'Flagged', SAFE: fullCheck ? 'No obvious risks' : 'Not fully checked' };
+    var label = labels[level];
+    var badge = document.createElement('span');
+    badge.className = 'phishing-shield-status phishing-shield-' + (level === 'SAFE' && !fullCheck ? 'unchecked' : level.toLowerCase());
+    var paths = level === 'SAFE' && fullCheck ? '<path d="m5 10 3 3 7-7"/>' : level === 'SAFE' ? '<circle cx="10" cy="10" r="7"/><path d="M10 6v4m0 3h.01"/>' : '<path d="m10 3 8 14H2L10 3Z"/><path d="M10 8v4m0 2h.01"/>';
+    badge.innerHTML = '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg><span>' + label + '</span>';
+    badge.title = fullCheck
+      ? label + '. Local heuristic check of sender, message text and links; this does not verify the sender or guarantee safety.'
+      : label + '. Preview check only; open the message for sender, body and link checks.';
+    badge.setAttribute('aria-label', badge.title);
+    return badge;
+  }
 
   function bump(key) {
     try {
@@ -80,6 +102,7 @@
       try { host = new URL(a.href).hostname.replace(/^www\./, ''); } catch (e) { return; }
       if (riskyHosts.indexOf(host) === -1) return;
       a.addEventListener('click', function (e) {
+        if (!enabled) return;
         e.preventDefault();
         e.stopPropagation();
         var link = result.riskyLinks.find(function (l) { return l.host === host; });
@@ -114,11 +137,8 @@
   function scanOpenedMessage() {
     // Gmail message bodies carry class a3s. Each one is scanned once.
     document.querySelectorAll('div.a3s').forEach(function (bodyEl) {
-      if (bodyEl.dataset.phishingShieldDone) return;
-      bodyEl.dataset.phishingShieldDone = '1';
-
       var container = bodyEl.closest('.adn') || bodyEl.closest('[role="listitem"]') || document;
-      var senderEl = container.querySelector('[email]') || document.querySelector('.gD');
+      var senderEl = container.querySelector('.gD[email], .gD, [email]');
       var from = '';
       var displayName = '';
       if (senderEl) {
@@ -131,17 +151,28 @@
         }
       }
       var subjectEl = document.querySelector('.hP');
+      var subject = subjectEl ? subjectEl.textContent.trim() : '';
+      var fingerprint = JSON.stringify([from, displayName, subject, bodyEl.textContent, Array.from(bodyEl.querySelectorAll('a[href]'), function (a) { return a.href; })]);
+      if (seenBodies.get(bodyEl) === fingerprint) return;
+      seenBodies.set(bodyEl, fingerprint);
+      bodyEl.dataset.phishingShieldDone = '1';
+      bodyEl.parentElement.querySelectorAll('.phishing-shield-banner, .phishing-shield-message-status').forEach(function (el) { el.remove(); });
       var links = Array.prototype.map.call(bodyEl.querySelectorAll('a[href]'), function (a) {
         return { text: a.textContent.trim(), href: a.href };
       });
       var result = Detector.analyzeEmail({
         from: from,
         displayName: displayName,
-        subject: subjectEl ? subjectEl.textContent : '',
+        subject: subject,
         bodyText: bodyEl.textContent || '',
         links: links,
       });
+      results.set(messageKey(from || displayName, subject), result);
+      if (results.size > 500) results.delete(results.keys().next().value);
       bump('scannedCount');
+      var status = statusBadge(result.level, true);
+      status.classList.add('phishing-shield-message-status');
+      bodyEl.parentElement.insertBefore(status, bodyEl);
       if (result.level === 'SAFE') return;
       bump('flaggedCount');
       injectBanner(bodyEl, result);
@@ -154,32 +185,43 @@
     // domain, so only flag strong pressure-language rows — the full
     // detector runs when the message is opened.
     document.querySelectorAll('tr.zA').forEach(function (row) {
-      if (row.dataset.phishingShieldDone) return;
-      row.dataset.phishingShieldDone = '1';
-      var text = row.textContent || '';
-      var senderEl = row.querySelector('.zF, .yP') || row.querySelector('td:first-child');
-      var sender = senderEl ? senderEl.textContent : '';
+      var subjectEl = row.querySelector('.bog');
+      var anchor = subjectEl && (subjectEl.closest('.y6') || subjectEl.parentElement);
+      if (!subjectEl || !anchor) return;
+      var senderEl = row.querySelector('.yW [email], .yW .zF, .yW .yP, .zF, .yP, [email]');
+      var sender = senderEl ? senderEl.textContent.trim() : '';
+      var from = senderEl ? senderEl.getAttribute('email') || '' : '';
+      var subject = subjectEl.textContent.trim();
+      var snippet = row.querySelector('.y2');
+      var text = subject + ' ' + (snippet ? snippet.textContent : '');
+      var cached = results.get(messageKey(from || sender, subject));
+      var preview = Detector.analyzeEmail({ from: from, displayName: sender, subject: text });
       var urgencyHits = (text.match(/urgent|immediately|within 24 hours|suspended|will be closed|verify your account|action required|password expired/gi) || []).length;
-      if (urgencyHits >= 2 && SUPPORT_SENDER.test(sender)) {
-        var subjectEl = row.querySelector('.bog');
-        var anchor = subjectEl || row.querySelector('td');
-        if (!anchor) return;
-        var flag = document.createElement('span');
-        flag.className = 'phishing-shield-list-flag';
-        flag.textContent = '🚩 Suspicious — open with caution';
-        flag.title = 'Phishing Shield: this subject uses strong pressure language from a support-like sender. The full check runs when you open it — do not click links inside it.';
-        anchor.appendChild(flag);
-      } else if (URGENCY.test(text) && /verify|confirm|restore/i.test(text) && SUPPORT_SENDER.test(sender)) {
-        // Single strong signal + a verify action is still worth a flag.
-        var el = row.querySelector('.bog') || row.querySelector('td');
-        if (!el) return;
-        var f = document.createElement('span');
-        f.className = 'phishing-shield-list-flag';
-        f.textContent = '🚩 Check before clicking';
-        f.title = 'Phishing Shield: pressure + verify language. The full check runs when you open it.';
-        el.appendChild(f);
-      }
+      var pressure = SUPPORT_SENDER.test(sender) && (urgencyHits >= 2 || (URGENCY.test(text) && /verify|confirm|restore/i.test(text)));
+      var level = cached ? cached.level : pressure && preview.level === 'SAFE' ? 'SUSPICIOUS' : preview.level;
+      var signature = JSON.stringify([sender, from, subject, text, level, !!cached]);
+      if (seenRows.get(row) === signature && row.querySelector('.phishing-shield-status')) return;
+      seenRows.set(row, signature);
+      row.querySelectorAll('.phishing-shield-status, .phishing-shield-list-flag').forEach(function (el) { el.remove(); });
+      var badge = statusBadge(level, !!cached);
+      badge.classList.add('phishing-shield-row-status');
+      if (level !== 'SAFE') badge.classList.add('phishing-shield-list-flag');
+      anchor.insertBefore(badge, anchor.firstChild);
+      row.classList.add('phishing-shield-row');
     });
+  }
+
+  function applySettings(data) {
+    enabled = data.enabled !== false;
+    document.documentElement.classList.toggle('phishing-shield-clean', data.cleanInbox !== false);
+    if (!enabled) {
+      document.querySelectorAll('.phishing-shield-status, .phishing-shield-banner, .phishing-shield-modal-backdrop').forEach(function (el) { el.remove(); });
+      seenBodies = new WeakMap();
+      seenRows = new WeakMap();
+    } else {
+      scanOpenedMessage();
+      scanInboxList();
+    }
   }
 
   var timer = null;
@@ -188,12 +230,8 @@
     timer = setTimeout(function () {
       timer = null;
       try {
-        if (chrome && chrome.storage) {
-          chrome.storage.local.get({ enabled: true }, function (d) {
-            if (d.enabled === false) return;
-            scanOpenedMessage();
-            scanInboxList();
-          });
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.local.get({ enabled: true, cleanInbox: true }, applySettings);
         } else {
           scanOpenedMessage();
           scanInboxList();
@@ -203,6 +241,11 @@
   }
 
   scan();
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener(function (changes, area) {
+      if (area === 'local' && (changes.enabled || changes.cleanInbox)) scan();
+    });
+  }
   try {
     new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
   } catch (e) { /* observer unavailable: initial scan already ran */ }

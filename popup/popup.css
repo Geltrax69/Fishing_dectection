@@ -10,6 +10,11 @@ header p { margin: 0; color: #5f6368; font-size: 13px; }
 .slider::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .15s; }
 .toggle input:checked + .slider { background: #1a7f37; }
 .toggle input:checked + .slider::before { transform: translateX(20px); }
+.toggle input:focus-visible + .slider { outline: 2px solid #185abc; outline-offset: 3px; }
+.clean-setting { display: flex; align-items: center; gap: 16px; margin: 16px 0; font-size: 13px; cursor: pointer; }
+.clean-setting small { display: block; margin-top: 4px; color: #5f6368; font-size: 12px; line-height: 1.4; }
+.clean-setting input { flex: none; width: 16px; height: 16px; margin-left: auto; accent-color: #1a7f37; }
+@media (prefers-reduced-motion: reduce) { .slider::before { transition: none; } }
 .status { padding: 10px; border-radius: 8px; font-size: 13px; line-height: 1.4; }
 .status.on { background: #dafbe1; }
 .status.off { background: #fde8e8; }

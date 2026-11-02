@@ -22,12 +22,27 @@
   font-size: 13px; background: #b3261e; color: #fff;
 }
 .phishing-shield-banner.phishing-shield-suspicious button { background: #b06000; }
-.phishing-shield-list-flag {
-  display: inline-block;
-  margin-left: 6px;
-  font-size: 13px;
-  cursor: help;
-  vertical-align: middle;
+.phishing-shield-status {
+  display: inline-flex; align-items: center; gap: 4px;
+  font: 500 11px/1.5 system-ui, sans-serif;
+  padding: 2px 6px; border-radius: 4px; white-space: nowrap;
+  vertical-align: middle; cursor: help;
+}
+.phishing-shield-status svg { flex: none; }
+.phishing-shield-unchecked { color: #465369; background: #edf1f7; }
+.phishing-shield-safe { color: #176534; background: #e5f3e9; }
+.phishing-shield-suspicious { color: #794500; background: #fff0ce; }
+.phishing-shield-high { color: #9b231b; background: #fce8e6; }
+.phishing-shield-row-status { margin-inline-end: 8px; }
+.phishing-shield-message-status { margin-block: 10px; }
+html.phishing-shield-clean tr.zA .y2,
+html.phishing-shield-clean tr.zA .brd,
+html.phishing-shield-clean tr.zA .aKS { display: none !important; }
+html.phishing-shield-clean tr.zA .y6 { display: flex; align-items: center; min-width: 0; }
+html.phishing-shield-clean tr.zA .bog { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) {
+  .phishing-shield-row-status > span { display: none; }
+  .phishing-shield-row-status { padding: 3px; margin-inline-end: 5px; }
 }
 .phishing-shield-modal-backdrop {
   position: fixed; inset: 0; z-index: 2147483647;

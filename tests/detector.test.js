@@ -9,6 +9,55 @@ const path = require('node:path');
 const { analyzeEmail, analyzeLink } = require('../src/detector.js');
 const fixtures = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures.json'), 'utf8'));
 
+const awsInvoice = {
+  from: 'invoicing@aws.com',
+  displayName: 'Amazon Web Services',
+  subject: 'Amazon Web Services GST Invoice Available',
+  bodyText: 'Greetings from Amazon Web Services. Your GST invoices can be downloaded from the Bills section of the Billing & Cost Management console.',
+  links: [{ text: 'https://console.aws.amazon.com/billing/home#/bills', href: 'https://console.aws.amazon.com/billing/home#/bills' }],
+};
+
+test('AWS invoice from documented aws.com sender does not get an impersonation warning', () => {
+  const result = analyzeEmail(awsInvoice);
+  assert.equal(result.score, 0);
+  assert.equal(result.level, 'SAFE');
+  assert.deepEqual(result.reasons, []);
+});
+
+test('AWS abbreviation is recognized for both known and unknown sender domains', () => {
+  assert.equal(analyzeEmail({ ...awsInvoice, displayName: 'AWS Billing' }).score, 0);
+  assert.equal(analyzeEmail({ ...awsInvoice, displayName: 'AWS Billing', from: 'invoicing@unknown.example' }).level, 'SUSPICIOUS');
+});
+
+for (const domain of ['aws.com.evil.example', 'fakeaws.com', 'aws-billing.example']) {
+  test(`AWS lookalike ${domain} is not accepted as a known brand domain`, () => {
+    const result = analyzeEmail({ ...awsInvoice, from: `invoicing@${domain}` });
+    assert.equal(result.level, 'SUSPICIOUS');
+    assert.ok(result.reasons.length);
+  });
+}
+
+test('known AWS sender does not bypass deceptive-link or credential checks', () => {
+  const result = analyzeEmail({ ...awsInvoice,
+    bodyText: 'Enter your password immediately.',
+    links: [{ text: 'console.aws.amazon.com', href: 'https://evil.example/login' }],
+  });
+  assert.equal(result.level, 'HIGH');
+  assert.equal(result.riskyLinks.length, 1);
+});
+
+test('brand words do not match unrelated names such as Pineapple or Drawstring', () => {
+  for (const displayName of ['Pineapple Newsletter', 'Drawstring Store']) {
+    assert.equal(analyzeEmail({ from: 'news@example.com', displayName }).score, 0);
+  }
+});
+
+test('unknown domain warning admits the brand list may be incomplete', () => {
+  const result = analyzeEmail({ ...awsInvoice, from: 'invoicing@unlisted.example' });
+  assert.ok(result.reasons.some(reason => reason.includes('list may be incomplete')));
+  assert.ok(result.reasons.every(reason => !reason.includes('not an official')));
+});
+
 for (const fixture of fixtures) {
   test(`fixture: ${fixture.name} -> ${fixture.expectedLevel}`, () => {
     const result = analyzeEmail(fixture.email);
@@ -32,7 +81,9 @@ test('analyzeLink: text-vs-destination mismatch is risky', () => {
 });
 
 test('analyzeLink: punycode domain is risky', () => {
-  const r = analyzeLink({ text: 'Click', href: 'https://xn--paypl-7va.example/login' });
+  const href = 'https://xn--bcher-kva.example/login';
+  assert.equal(new URL(href).hostname, 'xn--bcher-kva.example');
+  const r = analyzeLink({ text: 'Click', href });
   assert.ok(r.isRisky);
 });
 

@@ -1,1 +1,41 @@
-{"action":{"default_icon":{"128":"icons/icon128.png","16":"icons/icon16.png","48":"icons/icon48.png"},"default_popup":"popup/popup.html","default_title":"Phishing Shield for Gmail"},"content_scripts":[{"css":["src/content.css"],"js":["src/detector.js","src/content.js"],"matches":["https://mail.google.com/*"],"run_at":"document_idle"}],"description":"Detects phishing emails in Gmail, flags suspicious messages and links, and warns you not to open them. All checks run locally in your browser.","host_permissions":["https://mail.google.com/*"],"icons":{"128":"icons/icon128.png","16":"icons/icon16.png","48":"icons/icon48.png"},"manifest_version":3,"name":"Phishing Shield for Gmail","permissions":["storage"],"version":"0.1.0"}
+{
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_popup": "popup/popup.html",
+    "default_title": "Phishing Shield for Gmail"
+  },
+  "content_scripts": [
+    {
+      "css": [
+        "src/content.css"
+      ],
+      "js": [
+        "src/detector.js",
+        "src/content.js"
+      ],
+      "matches": [
+        "https://mail.google.com/*"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "description": "Detects phishing emails in Gmail, flags suspicious messages and links, and warns you not to open them. All checks run locally in your browser.",
+  "host_permissions": [
+    "https://mail.google.com/*"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "manifest_version": 3,
+  "name": "Phishing Shield for Gmail",
+  "permissions": [
+    "storage"
+  ],
+  "version": "0.2.1"
+}
